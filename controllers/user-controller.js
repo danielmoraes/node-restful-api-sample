@@ -1,30 +1,33 @@
-const Controller = require('./controller')
-const bcrypt = require('bcrypt')
-const UserRepository = require('../repositories').UserRepository
+const BaseController = require('./base-controller')
+const User = require('../lib/entities').User
 
-const SALT_ROUNDS = 13
+class UserController extends BaseController(User) {
+  static retrieveData (req, res, next) {
+    let data = {}
 
-class UserController extends Controller(UserRepository) {
-  static retrievePassword (req, res, next) {
     const encPassword = req.get('encp')
 
-    if (!encPassword) {
-      return next()
+    if (encPassword) {
+      try {
+        const password = Buffer.from(encPassword, 'base64').toString('ascii')
+        data['hash'] = User.hashPassword(password)
+      } catch () {}
     }
 
-    try {
-      var password = Buffer.from(encPassword, 'base64').toString('ascii')
-    } catch (err) {
-      return next()
-    }
+    User.getPublicKeys().forEach(function(key) {
+      if (key in req.body) {
+        data[key] = req.body[key]
+      }
+    })
 
-    bcrypt
-      .hash(password, SALT_ROUNDS)
-      .then((hash) => {
-        req.body.password = hash
-        return next()
-      })
-      .catch(next)
+    req.data = data
+  }
+
+  static retrieveOptions (req, res, next) {
+    let options = {}
+    options.limit = req.body.limit || 100
+    options.skip = req.body.skip || 0
+    return options
   }
 }
 
