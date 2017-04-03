@@ -1,26 +1,31 @@
 const BaseController = require('./base-controller')
 const User = require('../lib/entities').User
 
-class UserController extends BaseController(User) {
-  static retrieveData (req, res, next) {
-    let data = {}
+const B64_REGEX = new RegExp(
+  '^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{4}|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)$'
+)
 
+class UserController extends BaseController(User) {
+  static retrievePassword (req, res, next) {
     const encPassword = req.get('encp')
 
-    if (encPassword) {
-      try {
-        const password = Buffer.from(encPassword, 'base64').toString('ascii')
-        data['hash'] = User.hashPassword(password)
-      } catch () {}
+    if (!encPassword) {
+      next()
     }
 
-    User.getPublicKeys().forEach(function(key) {
-      if (key in req.body) {
-        data[key] = req.body[key]
-      }
-    })
+    if (!B64_REGEX.test(encPassword)) {
+      return next(new TypeError('Not a base64 string'))
+    }
 
-    req.data = data
+    try {
+      req.body.password = Buffer.from(encPassword, 'base64').toString('ascii')
+    } catch (e) {
+      return next()
+    }
+  }
+
+  static retrieveData (req, res, next) {
+    req.data = req.body
   }
 
   static retrieveOptions (req, res, next) {
