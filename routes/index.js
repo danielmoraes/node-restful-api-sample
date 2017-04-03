@@ -1,5 +1,14 @@
-const users = require('./users')
+const express = require('express')
+const userRoutes = require('./user-route');
 
-module.exports = {
-  users
-}
+const router = express.Router();
+
+/** GET /health-check - Check service health */
+router.get('/health-check', (req, res) =>
+  res.send('OK')
+);
+
+// mount user routes at /users
+router.use('/users', userRoutes);
+
+module.exports = router;
